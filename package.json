@@ -9,13 +9,41 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:javascript",
+    "onLanguage:typescript"
+  ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "goodnamz",
+      "properties": {
+        "goodnamz.ignoreGlobalNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Globally ignored names"
+        },
+        "goodnamz.workspaceIgnoreNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Globally ignored names"
+        }
+      }
+    },
     "commands": [
       {
-        "command": "goodnamz.helloWorld",
-        "title": "Hello World"
+        "command": "goodnamz.ignoreGlobal",
+        "title": "Ignore name in Globally"
+      },
+      {
+        "command": "goodnamz.ignoreWorkspace",
+        "title": "Ignore name in workspace"
       }
     ]
   },

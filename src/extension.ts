@@ -1,26 +1,65 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
+import { GoodNameActionProvider } from "./class/actionProvider";
+import { handelRefreshDiagnostics } from "./utils/helper/handelDiagnostics";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
+  console.log("GoodNamz Are Active Now");
+  const handelIgnoreGlobalCommand = vscode.commands.registerCommand(
+    "goodnamz.ignoreGlobal",
+    async (badName: string) => {
+      const config = vscode.workspace.getConfiguration("goodnamz");
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "goodnamz" is now active!');
+      const ignoredNames: string[] = config.get("ignoreGlobalNames") || [];
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('goodnamz.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from GoodNamz!');
-	});
+      if (!ignoredNames?.includes(badName)) {
+        await config.update("ignoreGlobalNames", [...ignoredNames, badName], vscode.ConfigurationTarget.Global);
+      }
+    }
+  );
 
-	context.subscriptions.push(disposable);
+  const handelIgnoreWorkspaceCommand = vscode.commands.registerCommand(
+    "goodnamz.ignoreWorkspace",
+    async (badName: string) => {
+      const config = vscode.workspace.getConfiguration("goodnamz");
+
+      const ignoredNames: string[] = config.get("workspaceIgnoreNames") || [];
+      if (!ignoredNames.includes(badName)) {
+        await config.update("workspaceIgnoreNames", [...ignoredNames, badName], vscode.ConfigurationTarget.Workspace);
+      }
+    }
+  );
+  context.subscriptions.push(handelIgnoreGlobalCommand, handelIgnoreWorkspaceCommand);
+
+  const highlighterCollection = vscode.languages.createDiagnosticCollection("goodnamz");
+
+  context.subscriptions.push(highlighterCollection);
+
+  const disposable = vscode.workspace.onDidChangeTextDocument((event) =>
+    handelRefreshDiagnostics(event.document, highlighterCollection)
+  );
+
+  const handelConfigChange = vscode.workspace.onDidChangeConfiguration((event) => {
+    if (
+      event.affectsConfiguration("goodnamz.ignoreGlobalNames") ||
+      event.affectsConfiguration("goodnamz.workspaceIgnoreNames")
+    ) {
+      for (const document of vscode.window.visibleTextEditors) {
+        handelRefreshDiagnostics(document.document, highlighterCollection);
+      }
+    }
+  });
+
+  for (const editor of vscode.window.visibleTextEditors) {
+    handelRefreshDiagnostics(editor.document, highlighterCollection);
+  }
+
+  context.subscriptions.push(
+    vscode.languages.registerCodeActionsProvider(["javascript", "typescript"], new GoodNameActionProvider(), {
+      providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
+    })
+  );
+
+  context.subscriptions.push(disposable, handelConfigChange);
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}
